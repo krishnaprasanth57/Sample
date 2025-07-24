@@ -1,0 +1,77 @@
+import os
+import threading
+from tkinter import *
+from tkinter import filedialog, messagebox
+from PIL import Image
+
+class ImageConverter:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Python Image Converter")
+        self.root.geometry("500x400")
+        self.root.resizable(False, False)
+
+        self.file_paths = []
+        self.output_format = StringVar(value="PNG")
+
+        # GUI Elements
+        Label(root, text="Image Converter", font=("Arial", 20, "bold")).pack(pady=10)
+
+        Button(root, text="Select Images", command=self.select_images, width=20).pack(pady=5)
+        Label(root, text="Select Output Format:", font=("Arial", 12)).pack(pady=5)
+        OptionMenu(root, self.output_format, "PNG", "JPG", "BMP", "GIF").pack(pady=5)
+
+        Button(root, text="Convert Images", command=self.start_conversion, width=20).pack(pady=10)
+
+        self.resize_var = IntVar()
+        self.compress_var = IntVar()
+        Checkbutton(root, text="Resize to 800x800", variable=self.resize_var).pack()
+        Checkbutton(root, text="Compress (Quality 70%)", variable=self.compress_var).pack()
+
+        self.status_label = Label(root, text="No images selected", fg="blue", font=("Arial", 10))
+        self.status_label.pack(pady=10)
+
+    def select_images(self):
+        self.file_paths = filedialog.askopenfilenames(filetypes=[("Image files", "*.jpg *.png *.bmp *.gif *.jpeg")])
+        if self.file_paths:
+            self.status_label.config(text=f"{len(self.file_paths)} images selected.")
+
+    def start_conversion(self):
+        if not self.file_paths:
+            messagebox.showerror("Error", "Please select images first.")
+            return
+        threading.Thread(target=self.convert_images).start()
+
+    def convert_images(self):
+        output_dir = filedialog.askdirectory(title="Select Output Directory")
+        if not output_dir:
+            return
+
+        count = 0
+        for file_path in self.file_paths:
+            try:
+                img = Image.open(file_path)
+
+                # Resize if selected
+                if self.resize_var.get():
+                    img = img.resize((800, 800))
+
+                # Set compression
+                quality = 70 if self.compress_var.get() else 95
+
+                base_name = os.path.basename(file_path)
+                name, _ = os.path.splitext(base_name)
+                save_path = os.path.join(output_dir, f"{name}.{self.output_format.get().lower()}")
+                img.save(save_path, self.output_format.get(), quality=quality)
+                count += 1
+            except Exception as e:
+                messagebox.showwarning("Warning", f"Could not convert {file_path}: {e}")
+
+        self.status_label.config(text=f"Converted {count} images to {self.output_format.get()} format.")
+        messagebox.showinfo("Done", f"Successfully converted {count} images.")
+
+if __name__ == "__main__":
+    root = Tk()
+    app = ImageConverter(root)
+    root.mainloop()
+    
